@@ -1,0 +1,105 @@
+// Prisma schema – this file defines your data model. No SQL needed.
+// Run: npm run db:push (to create tables) or npm run db:migrate (to version them)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ——— Users (one per account; can own one journal for now) ———
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?  // legacy / display; prefer firstName + lastName
+  firstName    String?
+  lastName     String?
+  phone        String?  // for future OTP auth
+  timezone     String?  // IANA e.g. America/Caracas (VET)
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt @default(now())
+  journal      Journal?
+}
+
+// ——— One journal per couple (e.g. "Carla & Edgardo") ———
+model Journal {
+  id          String   @id @default(cuid())
+  name        String   // e.g. "Carla & Edgardo"
+  startDate   DateTime // relationship start date
+  accentColor String?  // hex, e.g. #A56CB9; used for theme
+  dateFormat  String?  // 'DMY' (dd/mm/yyyy) or 'MDY' (mm/dd/yyyy)
+  createdAt   DateTime @default(now())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  memories   Memory[]
+  milestones Milestone[]
+  cuteTexts  CuteText[]
+  chatStats  ChatStat[]
+}
+
+// ——— Memories (daily or milestone) ———
+model Memory {
+  id          String   @id @default(cuid())
+  title       String
+  date        String   // YYYY-MM-DD or any string you like
+  imageUrl    String
+  type        MemoryType
+  description String   @default("")
+  createdAt   DateTime @default(now())
+  journalId   String
+  journal     Journal  @relation(fields: [journalId], references: [id], onDelete: Cascade)
+
+  @@index([journalId])
+}
+
+enum MemoryType {
+  daily
+  milestone
+}
+
+// ——— Milestones (first hello, first Christmas, etc.) ———
+model Milestone {
+  id          String   @id @default(cuid())
+  date        String
+  title       String
+  description String
+  createdAt   DateTime @default(now())
+  journalId   String
+  journal     Journal  @relation(fields: [journalId], references: [id], onDelete: Cascade)
+
+  @@index([journalId])
+}
+
+// ——— Cute / favorite text messages ———
+model CuteText {
+  id        String   @id @default(cuid())
+  text      String
+  sender    String
+  date      String
+  isFavorite Boolean @default(true)
+  color     String   @default("white") // "white" | "primary"
+  createdAt DateTime @default(now())
+  journalId String
+  journal   Journal  @relation(fields: [journalId], references: [id], onDelete: Cascade)
+
+  @@index([journalId])
+}
+
+// ——— Chat stats (total messages, top sender, most active time) ———
+model ChatStat {
+  id      String   @id @default(cuid())
+  icon    String
+  value   String
+  label   String
+  subLabel String?
+  createdAt DateTime @default(now())
+  journalId String
+  journal   Journal  @relation(fields: [journalId], references: [id], onDelete: Cascade)
+
+  @@index([journalId])
+}
