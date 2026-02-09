@@ -14,7 +14,6 @@ dist-ssr
 .env
 .env.*
 !.env.example
-!.env.production
 
 # Backend uploads (user-uploaded images)
 backend/uploads
