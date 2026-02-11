@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="frame-src https://www.youtube.com https://www.google.com https://open.spotify.com;">
     <title>LoveStory</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round|Material+Icons+Outlined" rel="stylesheet">
@@ -56,15 +57,19 @@
       .font-display {
         font-family: 'Playfair Display', serif;
       }
-      /* Glassmorphism: blur(10px) matches portfolio frosted-glass effect.
-         translateZ(0) promotes layer so backdrop-filter is applied reliably. */
+      /* Glassmorphism: same strength as login (backdrop-blur-xl = 24px).
+         isolation: isolate + transform creates stacking context so backdrop-filter works
+         even with overflow on ancestors (e.g. overflow-x-hidden). */
       .glass-panel {
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
+        isolation: isolate;
+        backdrop-filter: blur(24px) !important;
+        -webkit-backdrop-filter: blur(24px) !important;
+        transform: translateZ(0);
       }
       .glass-card {
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
+        isolation: isolate;
+        backdrop-filter: blur(24px) !important;
+        -webkit-backdrop-filter: blur(24px) !important;
         background: rgba(255, 255, 255, 0.5);
         transform: translateZ(0);
       }
@@ -72,8 +77,9 @@
         background: rgba(15, 23, 42, 0.5);
       }
       .btn-glass {
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
+        isolation: isolate;
+        backdrop-filter: blur(24px) !important;
+        -webkit-backdrop-filter: blur(24px) !important;
         background: rgba(255, 255, 255, 0.5);
         transform: translateZ(0);
       }

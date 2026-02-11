@@ -11,6 +11,9 @@ function serializeJournal(journal: {
   startDate: Date;
   accentColor: string | null;
   dateFormat: string | null;
+  songUrl: string | null;
+  songTitle: string | null;
+  songArtist: string | null;
   memories: Array<{ id: string; title: string; date: string; imageUrl: string; type: string; description: string }>;
   milestones: Array<{ id: string; date: string; title: string; description: string }>;
   cuteTexts: Array<{ id: string; text: string; sender: string; date: string; isFavorite: boolean; color: string }>;
@@ -22,6 +25,9 @@ function serializeJournal(journal: {
     startDate: journal.startDate.toISOString(),
     accentColor: journal.accentColor ?? '#A56CB9',
     dateFormat: journal.dateFormat ?? 'DMY',
+    songUrl: journal.songUrl ?? undefined,
+    songTitle: journal.songTitle ?? undefined,
+    songArtist: journal.songArtist ?? undefined,
     memories: journal.memories.map((m) => ({
       id: m.id,
       title: m.title,
@@ -96,6 +102,12 @@ authRouter.post('/register', async (req, res) => {
     if (Number.isNaN(startDate.getTime())) {
       return res.status(400).json({ error: 'Invalid start date' });
     }
+    const today = new Date();
+    const todayStart = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+    const startStart = Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate());
+    if (startStart > todayStart) {
+      return res.status(400).json({ error: 'Relationship start date cannot be in the future.' });
+    }
     const user = await prisma.user.create({
       data: {
         email,
@@ -114,7 +126,7 @@ authRouter.post('/register', async (req, res) => {
       },
       include: {
         memories: { orderBy: { date: 'desc' } },
-        milestones: { orderBy: { date: 'asc' } },
+        milestones: { orderBy: { date: 'desc' } },
         cuteTexts: { orderBy: { createdAt: 'desc' } },
         chatStats: true,
       },
@@ -149,7 +161,7 @@ authRouter.post('/login', async (req, res) => {
         journal: {
           include: {
             memories: { orderBy: { date: 'desc' } },
-            milestones: { orderBy: { date: 'asc' } },
+            milestones: { orderBy: { date: 'desc' } },
             cuteTexts: { orderBy: { createdAt: 'desc' } },
             chatStats: true,
           },

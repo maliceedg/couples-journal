@@ -61,7 +61,7 @@ const Anniversary: React.FC<AnniversaryProps> = ({ onBack, journal }) => {
       </header>
 
       {/* Upcoming – planned features (pin: video export via Backend + FFmpeg); above reel so users see it first */}
-      <section className="rounded-[2rem] border border-primary/20 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm p-6 md:p-8">
+      <section className="rounded-[2rem] border border-primary/20 bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl p-6 md:p-8">
         <h2 className="text-2xl font-display font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
           <span className="material-icons-round text-primary">upcoming</span>
           Upcoming
@@ -180,7 +180,7 @@ const Anniversary: React.FC<AnniversaryProps> = ({ onBack, journal }) => {
       </section>
 
       {/* Timeline Section */}
-      <section className="bg-secondary/30 dark:bg-white/5 backdrop-blur-md p-8 md:p-16 rounded-[3rem] border border-primary/10">
+      <section className="bg-secondary/30 dark:bg-white/5 backdrop-blur-xl p-8 md:p-16 rounded-[3rem] border border-primary/10">
         <h2 className="text-4xl font-display font-bold text-slate-800 dark:text-slate-100 mb-16 text-center flex items-center justify-center gap-4">
           <span className="material-icons-round text-primary">timeline</span>
           Our Journey

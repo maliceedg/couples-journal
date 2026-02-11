@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { getProfile, updateProfile, updateJournalPreferences, getApiErrorMessage } from '../api';
 import { ACCENT_COLORS } from '../constants/colors';
-import { formatDateByPreference, formatDateInputMask, parseUserDateToISO } from '../utils/dateHelpers';
+import { formatDateByPreference, formatDateInputMask, parseUserDateToISO, isDateAfterToday } from '../utils/dateHelpers';
+import { parseSongUrl, isValidSongUrl } from '../utils/songUrl';
 import type { UserProfile } from '../types';
 import type { JournalData, DateFormatPreference } from '../types';
 
@@ -32,6 +33,10 @@ const Profile: React.FC<ProfileViewProps> = ({ journal, journalLoading, onBack, 
   const [anniversarySaving, setAnniversarySaving] = useState(false);
   const [anniversarySuccess, setAnniversarySuccess] = useState(false);
   const [anniversaryError, setAnniversaryError] = useState<string | null>(null);
+  const [songUrl, setSongUrl] = useState(journal?.songUrl ?? '');
+  const [songSaving, setSongSaving] = useState(false);
+  const [songSuccess, setSongSuccess] = useState(false);
+  const [songError, setSongError] = useState<string | null>(null);
 
   useEffect(() => {
     if (journal) {
@@ -39,6 +44,7 @@ const Profile: React.FC<ProfileViewProps> = ({ journal, journalLoading, onBack, 
       setDateFormat(journal.dateFormat ?? 'DMY');
       const iso = journal.startDate?.slice(0, 10) ?? '';
       setAnniversaryDate(iso ? formatDateByPreference(iso, journal.dateFormat ?? 'DMY') : '');
+      setSongUrl(journal.songUrl ?? '');
     }
   }, [journal]);
 
@@ -243,6 +249,11 @@ const Profile: React.FC<ProfileViewProps> = ({ journal, journalLoading, onBack, 
                     setAnniversaryError(null);
                     try {
                       const startDateIso = anniversaryDate.trim() ? parseUserDateToISO(anniversaryDate, dateFormat) : undefined;
+                      if (startDateIso != null && isDateAfterToday(startDateIso)) {
+                        setAnniversaryError('Relationship start date cannot be in the future.');
+                        setAnniversarySaving(false);
+                        return;
+                      }
                       const updated = await updateJournalPreferences({
                         ...(startDateIso != null && { startDate: startDateIso }),
                       });
@@ -263,6 +274,112 @@ const Profile: React.FC<ProfileViewProps> = ({ journal, journalLoading, onBack, 
               </div>
               {anniversarySuccess && <p className="text-sm text-green-600 dark:text-green-400">Anniversary date saved.</p>}
               {anniversaryError && <p className="text-sm text-red-600 dark:text-red-400" role="alert">{anniversaryError}</p>}
+            </div>
+
+            {/* Our Song */}
+            <div className="pt-6 border-t border-slate-200 dark:border-slate-600 space-y-4">
+              <h2 className="text-lg font-semibold text-slate-800 dark:text-white mb-2">Our Song</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Paste a YouTube or Spotify track link. It will appear on your Relationship Wrapped card and you can listen here.
+              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                <input
+                  type="url"
+                  value={songUrl}
+                  onChange={(e) => { setSongUrl(e.target.value); setSongError(null); setSongSuccess(false); }}
+                  placeholder="https://youtube.com/watch?v=... or https://open.spotify.com/track/..."
+                  className="flex-1 min-w-[200px] px-4 py-3 bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none dark:text-white text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setSongSaving(true);
+                    setSongSuccess(false);
+                    setSongError(null);
+                    try {
+                      const value = songUrl.trim() || null;
+                      if (value != null && !isValidSongUrl(value)) {
+                        setSongError('Please enter a valid YouTube or Spotify track/album/playlist link.');
+                        setSongSaving(false);
+                        return;
+                      }
+                      const updated = await updateJournalPreferences({ songUrl: value });
+                      onPreferencesSaved(updated);
+                      setSongSuccess(true);
+                    } catch (err) {
+                      setSongError(getApiErrorMessage(err, 'Failed to save song'));
+                    } finally {
+                      setSongSaving(false);
+                    }
+                  }}
+                  disabled={songSaving}
+                  className="flex items-center gap-2 px-4 py-3 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-on-primary transition-colors font-semibold disabled:opacity-60"
+                >
+                  <span className="material-icons-round text-lg">{songSaving ? 'hourglass_empty' : 'music_note'}</span>
+                  {songSaving ? 'Saving…' : 'Save song'}
+                </button>
+              </div>
+              {songError && <p className="text-sm text-red-600 dark:text-red-400" role="alert">{songError}</p>}
+              {songSuccess && <p className="text-sm text-green-600 dark:text-green-400">Song link saved.</p>}
+              {journal?.songUrl?.trim() && !songSaving && (
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Tip: Click &quot;Save song&quot; again to refresh title and artist (e.g. after adding Spotify credentials).
+                </p>
+              )}
+              {(() => {
+                const urlToShow = songUrl.trim() || journal?.songUrl || '';
+                const parsed = parseSongUrl(urlToShow);
+                const savedTitle = journal?.songTitle?.trim();
+                const savedArtist = journal?.songArtist?.trim();
+                const savedLabel = savedArtist && savedTitle ? `${savedArtist} – ${savedTitle}` : savedTitle || null;
+                if (!parsed) return null;
+                return (
+                  <div className="mt-4 space-y-2 w-full min-w-0">
+                    {savedLabel && (
+                      <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        {savedLabel}
+                      </p>
+                    )}
+                    <div
+                      className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/50 w-full"
+                      style={{ minHeight: parsed.type === 'youtube' ? 225 : 152 }}
+                    >
+                      {parsed.type === 'youtube' ? (
+                        <iframe
+                          key={parsed.embedUrl}
+                          title="Our Song (YouTube)"
+                          src={`${parsed.embedUrl}?rel=0`}
+                          className="w-full border-0 block"
+                          style={{ width: '100%', height: 225, minHeight: 225 }}
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                      ) : (
+                        <iframe
+                          key={parsed.embedUrl}
+                          title="Our Song (Spotify)"
+                          src={`${parsed.embedUrl}?utm_source=oembed`}
+                          className="w-full border-0 block"
+                          style={{ width: '100%', height: 152, minHeight: 152 }}
+                          allowFullScreen
+                          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                        />
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      If the player doesn’t load,{' '}
+                      <a
+                        href={parsed.shareUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary font-medium underline"
+                      >
+                        open in {parsed.type === 'youtube' ? 'YouTube' : 'Spotify'}
+                      </a>
+                    </p>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Display preferences (couple) */}

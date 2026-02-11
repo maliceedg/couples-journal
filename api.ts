@@ -96,6 +96,7 @@ export async function updateJournalPreferences(data: {
   accentColor?: string | null;
   dateFormat?: 'DMY' | 'MDY' | null;
   startDate?: string | null;
+  songUrl?: string | null;
 }): Promise<JournalData> {
   const res = await fetch(`${API_BASE}/api/journal`, {
     method: 'PATCH',

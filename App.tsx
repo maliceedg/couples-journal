@@ -5,7 +5,9 @@ import Dashboard from './components/Dashboard';
 import AddMemory from './components/AddMemory';
 import Anniversary from './components/Anniversary';
 import MemoryDetail from './components/MemoryDetail';
+import MemoriesView from './components/MemoriesView';
 import CuteTextsView from './components/CuteTextsView';
+import WrappedView from './components/WrappedView';
 import Profile from './components/Profile';
 import { getJournal, getToken, setToken, clearToken, getApiErrorMessage } from './api';
 import type { LoginResponse } from './api';
@@ -21,6 +23,7 @@ const App: React.FC = () => {
   const [journalLoading, setJournalLoading] = useState(false);
   const [journalError, setJournalError] = useState<string | null>(null);
   const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null);
+  const [memoryDetailReturnView, setMemoryDetailReturnView] = useState<ViewState>('dashboard');
 
   useEffect(() => {
     const token = getToken();
@@ -47,7 +50,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (checkingSession) return;
-    if (currentView === 'dashboard' || currentView === 'anniversary' || currentView === 'cute-texts' || currentView === 'profile') {
+    if (currentView === 'dashboard' || currentView === 'anniversary' || currentView === 'memories' || currentView === 'cute-texts' || currentView === 'profile' || currentView === 'wrapped') {
       setJournalLoading(true);
       setJournalError(null);
       getJournal()
@@ -110,6 +113,7 @@ const App: React.FC = () => {
           <Dashboard
             onNavigate={setCurrentView}
             onViewMemory={(mem) => {
+              setMemoryDetailReturnView('dashboard');
               setSelectedMemory(mem);
               setCurrentView('memory-detail');
             }}
@@ -123,17 +127,35 @@ const App: React.FC = () => {
           <AddMemory
             journal={journal}
             onCancel={() => setCurrentView('dashboard')}
-            onSave={() => setCurrentView('dashboard')}
+            onSave={async () => {
+              const data = await getJournal();
+              setJournal(data);
+              setCurrentView('dashboard');
+            }}
           />
         );
       case 'anniversary':
         return <Anniversary onBack={() => setCurrentView('dashboard')} journal={journal} />;
+      case 'memories':
+        return (
+          <MemoriesView
+            journal={journal}
+            loading={journalLoading}
+            error={journalError}
+            onBack={() => setCurrentView('dashboard')}
+            onViewMemory={(mem) => {
+              setMemoryDetailReturnView('memories');
+              setSelectedMemory(mem);
+              setCurrentView('memory-detail');
+            }}
+          />
+        );
       case 'memory-detail':
         return (
           <MemoryDetail
             memory={selectedMemory}
             dateFormat={journal?.dateFormat}
-            onBack={() => setCurrentView('dashboard')}
+            onBack={() => setCurrentView(memoryDetailReturnView)}
           />
         );
       case 'cute-texts':
@@ -152,6 +174,13 @@ const App: React.FC = () => {
             journalLoading={journalLoading}
             onBack={() => setCurrentView('dashboard')}
             onPreferencesSaved={setJournal}
+          />
+        );
+      case 'wrapped':
+        return (
+          <WrappedView
+            journal={journal}
+            onBack={() => setCurrentView('dashboard')}
           />
         );
       default:

@@ -8,7 +8,7 @@ type MemoryKind = 'daily' | 'milestone' | 'text';
 interface AddMemoryProps {
   journal: JournalData | null;
   onCancel: () => void;
-  onSave: () => void;
+  onSave: () => void | Promise<void>;
 }
 
 const AddMemory: React.FC<AddMemoryProps> = ({ journal, onCancel, onSave }) => {
@@ -57,7 +57,7 @@ const AddMemory: React.FC<AddMemoryProps> = ({ journal, onCancel, onSave }) => {
           return;
         }
         await createCuteText({ text, sender, date, isFavorite, color });
-        onSave();
+        await onSave();
         return;
       }
 
@@ -82,8 +82,8 @@ const AddMemory: React.FC<AddMemoryProps> = ({ journal, onCancel, onSave }) => {
       } else {
         image = 'https://picsum.photos/400/400?random=memory';
       }
-      await createMemory({ title, date, image, type: selectedType, description });
-      onSave();
+        await createMemory({ title, date, image, type: selectedType, description });
+      await onSave();
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to save'));
     } finally {

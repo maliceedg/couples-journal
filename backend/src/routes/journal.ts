@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
 import { prisma } from '../db.js';
+import { fetchSongMetadata } from '../songTitle.js';
 
 export const journalRouter = Router();
 
@@ -15,7 +16,7 @@ journalRouter.get('/', async (_req, res) => {
       where: { userId },
       include: {
         memories: { orderBy: { date: 'desc' } },
-        milestones: { orderBy: { date: 'asc' } },
+        milestones: { orderBy: { date: 'desc' } },
         cuteTexts: { orderBy: { createdAt: 'desc' } },
         chatStats: true,
       },
@@ -29,6 +30,9 @@ journalRouter.get('/', async (_req, res) => {
       startDate: journal.startDate.toISOString(),
       accentColor: journal.accentColor ?? '#A56CB9',
       dateFormat: journal.dateFormat ?? 'DMY',
+      songUrl: journal.songUrl ?? undefined,
+      songTitle: journal.songTitle ?? undefined,
+      songArtist: journal.songArtist ?? undefined,
       memories: journal.memories.map((m) => ({
         id: m.id,
         title: m.title,
@@ -71,16 +75,39 @@ journalRouter.patch('/', async (req, res) => {
     const userId = getUserId(res);
     const journal = await prisma.journal.findFirst({ where: { userId }, select: { id: true } });
     if (!journal) return res.status(404).json({ error: 'No journal found' });
-    const { accentColor, dateFormat, startDate: startDateRaw } = req.body as {
+    const { accentColor, dateFormat, startDate: startDateRaw, songUrl: songUrlRaw } = req.body as {
       accentColor?: string | null;
       dateFormat?: string | null;
       startDate?: string | null;
+      songUrl?: string | null;
     };
     let startDateValue: Date | undefined;
     if (startDateRaw != null && typeof startDateRaw === 'string' && startDateRaw.trim()) {
       const parsed = new Date(startDateRaw.trim());
-      if (!Number.isNaN(parsed.getTime())) startDateValue = parsed;
+      if (!Number.isNaN(parsed.getTime())) {
+        const today = new Date();
+        const todayStart = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+        const startStart = Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate());
+        if (startStart > todayStart) {
+          return res.status(400).json({ error: 'Relationship start date cannot be in the future.' });
+        }
+        startDateValue = parsed;
+      }
     }
+    let songTitleValue: string | null | undefined;
+    let songArtistValue: string | null | undefined;
+    if (songUrlRaw !== undefined) {
+      const url = songUrlRaw?.trim() || null;
+      if (url) {
+        const meta = await fetchSongMetadata(url);
+        songTitleValue = meta.title;
+        songArtistValue = meta.artist;
+      } else {
+        songTitleValue = null;
+        songArtistValue = null;
+      }
+    }
+
     const updated = await prisma.journal.update({
       where: { id: journal.id },
       data: {
@@ -89,10 +116,13 @@ journalRouter.patch('/', async (req, res) => {
           dateFormat: dateFormat === 'DMY' || dateFormat === 'MDY' ? dateFormat : null,
         }),
         ...(startDateValue !== undefined && { startDate: startDateValue }),
+        ...(songUrlRaw !== undefined && { songUrl: songUrlRaw?.trim() || null }),
+        ...(songTitleValue !== undefined && { songTitle: songTitleValue }),
+        ...(songArtistValue !== undefined && { songArtist: songArtistValue }),
       },
       include: {
         memories: { orderBy: { date: 'desc' } },
-        milestones: { orderBy: { date: 'asc' } },
+        milestones: { orderBy: { date: 'desc' } },
         cuteTexts: { orderBy: { createdAt: 'desc' } },
         chatStats: true,
       },
@@ -103,6 +133,9 @@ journalRouter.patch('/', async (req, res) => {
       startDate: updated.startDate.toISOString(),
       accentColor: updated.accentColor ?? '#A56CB9',
       dateFormat: updated.dateFormat ?? 'DMY',
+      songUrl: updated.songUrl ?? undefined,
+      songTitle: updated.songTitle ?? undefined,
+      songArtist: updated.songArtist ?? undefined,
       memories: updated.memories.map((m) => ({
         id: m.id,
         title: m.title,

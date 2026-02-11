@@ -32,6 +32,9 @@ model Journal {
   startDate   DateTime // relationship start date
   accentColor String?  // hex, e.g. #A56CB9; used for theme
   dateFormat  String?  // 'DMY' (dd/mm/yyyy) or 'MDY' (mm/dd/yyyy)
+  songUrl     String?  // YouTube or Spotify link for "Our Song"
+  songTitle   String?  // Fetched from oEmbed when saving songUrl (e.g. "Landline")
+  songArtist  String?  // Artist name from oEmbed (YouTube author_name; Spotify parsed or from title)
   createdAt   DateTime @default(now())
   userId      String   @unique
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)

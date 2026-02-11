@@ -63,6 +63,18 @@ memoriesRouter.post('/', async (req, res) => {
         description: description ?? '',
       },
     });
+
+    if (type === 'milestone') {
+      await prisma.milestone.create({
+        data: {
+          journalId,
+          title,
+          date,
+          description: description ?? '',
+        },
+      });
+    }
+
     res.status(201).json({
       id: memory.id,
       title: memory.title,

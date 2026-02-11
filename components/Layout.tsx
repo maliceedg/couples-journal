@@ -11,13 +11,13 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children, toggleTheme, isDark, showProfileLink, onNavigateToProfile, onLogout }) => {
   return (
-    <div className="min-h-screen relative overflow-x-clip">
-      {/* Background Hearts Animation – use accent color from display preferences */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <span className="material-icons-round absolute top-10 left-10 text-6xl animate-float" style={{ color: 'var(--color-primary-alpha-15, rgba(165,108,185,0.15))' }}>favorite</span>
-        <span className="material-icons-round absolute bottom-20 left-20 text-9xl animate-float" style={{ animationDelay: '1s', color: 'var(--color-primary-alpha-15, rgba(165,108,185,0.15))' }}>favorite</span>
-        <span className="material-icons-round absolute top-40 right-10 text-5xl animate-float" style={{ animationDelay: '2s', color: 'var(--color-primary-alpha-15, rgba(165,108,185,0.15))' }}>favorite</span>
-        <span className="material-icons-round absolute bottom-10 right-1/4 text-8xl animate-float" style={{ animationDelay: '0.5s', color: 'var(--color-primary-alpha-15, rgba(165,108,185,0.15))' }}>favorite</span>
+    <div className="min-h-screen min-h-[100dvh] relative overflow-x-hidden">
+      {/* Background Hearts – full viewport so they never crop on small/long screens */}
+      <div className="fixed inset-0 min-h-screen min-h-[100dvh] pointer-events-none overflow-hidden z-0" aria-hidden="true">
+        <span className="material-icons-round absolute top-10 left-10 text-6xl animate-float" style={{ color: 'var(--color-primary-alpha-30, rgba(165,108,185,0.3))' }}>favorite</span>
+        <span className="material-icons-round absolute bottom-24 left-20 text-9xl animate-float" style={{ animationDelay: '1s', color: 'var(--color-primary-alpha-30, rgba(165,108,185,0.3))' }}>favorite</span>
+        <span className="material-icons-round absolute top-40 right-10 text-5xl animate-float" style={{ animationDelay: '2s', color: 'var(--color-primary-alpha-30, rgba(165,108,185,0.3))' }}>favorite</span>
+        <span className="material-icons-round absolute bottom-20 right-1/4 text-8xl animate-float" style={{ animationDelay: '0.5s', color: 'var(--color-primary-alpha-30, rgba(165,108,185,0.3))' }}>favorite</span>
       </div>
 
       {showProfileLink && (

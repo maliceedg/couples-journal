@@ -1,6 +1,14 @@
 import React, { useState } from 'react';
 import { login, register, getApiErrorMessage } from '../api';
+import { isDateAfterToday } from '../utils/dateHelpers';
 import type { LoginResponse } from '../api';
+
+/** Inline glass blur so it can't be overridden by stylesheet order (same as Dashboard). */
+const glassStyle: React.CSSProperties = {
+  backdropFilter: 'blur(24px)',
+  WebkitBackdropFilter: 'blur(24px)',
+  isolation: 'isolate',
+};
 
 interface LoginProps {
   onLoginSuccess: (data: LoginResponse) => void;
@@ -57,6 +65,10 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       setError('Please enter a name for your journal (e.g. "Carla & Edgardo").');
       return;
     }
+    if (startDate.trim() && isDateAfterToday(startDate.trim())) {
+      setError('Relationship start date cannot be in the future.');
+      return;
+    }
     setLoading(true);
     try {
       const data = await register({
@@ -99,8 +111,8 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         </div>
       </div>
 
-      {/* Right Side: Login Form */}
-      <div className="flex flex-col w-full lg:w-1/2 justify-center items-center p-6 lg:p-24 bg-bg-light dark:bg-bg-dark transition-colors duration-500">
+      {/* Right Side: Login Form – light glass so background hearts stay visible */}
+      <div className="flex flex-col w-full lg:w-1/2 justify-center items-center p-6 lg:p-24 min-h-screen min-h-[100dvh] transition-colors duration-500 bg-white/25 dark:bg-slate-900/30 border-0 border-slate-200/40 dark:border-slate-700/40 lg:border-l" style={glassStyle}>
         <div className="w-full max-w-md animate-fade-in">
           {/* Mobile Header */}
           <div className="flex lg:hidden items-center gap-3 mb-10">

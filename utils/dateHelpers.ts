@@ -69,6 +69,19 @@ export function parseUserDateToISO(input: string, format: DateFormatPreference):
 }
 
 /**
+ * True if the given YYYY-MM-DD date is after today (local date).
+ * Use to reject future relationship start dates.
+ */
+export function isDateAfterToday(isoDate: string): boolean {
+  const d = parseLocalDate(isoDate);
+  if (!d) return false;
+  const today = new Date();
+  const a = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const b = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  return a > b;
+}
+
+/**
  * Days until the next monthly anniversary (same day of month as startDate).
  * e.g. startDate June 15 → next 15th of the month.
  */

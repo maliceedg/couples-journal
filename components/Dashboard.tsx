@@ -7,6 +7,13 @@ import type { JournalData, Memory } from '../types';
 
 const CUTE_TEXT_CARD_WIDTH = 320 + 24; // w-80 + gap-6 in px
 
+/** Inline glass blur so it can't be overridden by stylesheet order (Tailwind, HMR, etc.) */
+const glassStyle: React.CSSProperties = {
+  backdropFilter: 'blur(24px)',
+  WebkitBackdropFilter: 'blur(24px)',
+  isolation: 'isolate',
+};
+
 interface DashboardProps {
   onNavigate: (view: ViewState) => void;
   onViewMemory: (memory: Memory) => void;
@@ -75,10 +82,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onViewMemory, journal
       </header>
 
       {/* Time Together */}
-      <section className="bg-card-white dark:bg-slate-800/40 glass-panel p-6 md:p-10 rounded-[2.5rem] shadow-xl border border-white/50 dark:border-slate-700/50">
+      <section className="bg-white/50 dark:bg-slate-800/40 glass-panel p-6 md:p-10 rounded-[2.5rem] shadow-xl border border-white/50 dark:border-slate-700/50" style={glassStyle}>
         <div className="flex justify-between items-center mb-8 px-2">
           <h2 className="text-2xl md:text-3xl font-display font-bold text-primary">Time Together</h2>
-          <button className="w-10 h-10 rounded-full flex items-center justify-center bg-white dark:bg-slate-700 shadow-sm hover:shadow-md transition-all text-slate-500">
+          <button
+            type="button"
+            onClick={() => onNavigate('wrapped')}
+            className="w-10 h-10 rounded-full flex items-center justify-center bg-white dark:bg-slate-700 shadow-sm hover:shadow-md transition-all text-slate-500 hover:text-primary"
+            aria-label="Share your relationship wrapped"
+          >
             <span className="material-icons-round text-xl">share</span>
           </button>
         </div>
@@ -106,24 +118,37 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onViewMemory, journal
         </div>
       </section>
 
-      {/* Memories Grid */}
+      {/* Memories Grid – latest 6 with View all */}
       <section>
-        <div className="flex items-end justify-between mb-8 px-2">
+        <div className="flex flex-wrap items-end justify-between gap-4 mb-8 px-2">
           <div>
             <h2 className="text-3xl font-display font-bold text-primary">Our Memories</h2>
             <p className="text-slate-500 text-sm mt-1">Capturing every beautiful moment.</p>
           </div>
-          <button 
-            onClick={() => onNavigate('add-memory')}
-            className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-on-primary px-5 py-3 rounded-full font-bold shadow-lg shadow-primary/20 transition-all hover:-translate-y-1"
-          >
-            <span className="material-icons-round text-sm">add_a_photo</span>
-            <span className="hidden md:inline">Add Memory</span>
-          </button>
+          <div className="flex items-center gap-3">
+            {memories.length > 0 && (
+              <button
+                type="button"
+                onClick={() => onNavigate('memories')}
+                className="btn-glass flex items-center gap-2 px-4 py-2 rounded-full border border-primary/30 text-primary hover:bg-primary hover:text-on-primary transition-colors font-semibold text-sm"
+                style={glassStyle}
+              >
+                <span className="material-icons-round text-lg">grid_view</span>
+                View all
+              </button>
+            )}
+            <button
+              onClick={() => onNavigate('add-memory')}
+              className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-on-primary px-5 py-3 rounded-full font-bold shadow-lg shadow-primary/20 transition-all hover:-translate-y-1"
+            >
+              <span className="material-icons-round text-sm">add_a_photo</span>
+              <span className="hidden md:inline">Add Memory</span>
+            </button>
+          </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
            {memories.length === 0 ? (
-             <div className="col-span-full flex flex-col items-center justify-center py-16 px-6 rounded-2xl bg-white/50 dark:bg-slate-800/30 border border-slate-200/50 dark:border-slate-700/50 text-center">
+             <div className="col-span-full flex flex-col items-center justify-center py-16 px-6 rounded-2xl bg-white/50 dark:bg-slate-800/30 border border-slate-200/50 dark:border-slate-700/50 text-center" style={glassStyle}>
                <span className="material-icons-round text-5xl mb-4" style={{ color: 'var(--color-primary)' }}>photo_library</span>
                <p className="text-slate-600 dark:text-slate-400 font-medium mb-2">No memories yet</p>
                <p className="text-slate-500 dark:text-slate-400 text-sm mb-6 max-w-sm">Capture your first moment together and start building your story.</p>
@@ -137,7 +162,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onViewMemory, journal
                </button>
              </div>
            ) : (
-             memories.map((mem, idx) => (
+             memories.slice(0, 6).map((mem, idx) => (
                <button
                  key={mem.id}
                  type="button"
@@ -155,7 +180,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onViewMemory, journal
       </section>
 
       {/* Our journey – real counts from the journal; empty state with CTA when all zeros */}
-      <section className="bg-white/40 dark:bg-slate-800/40 glass-panel rounded-[3rem] p-8 md:p-12 shadow-lg border border-white/20">
+      <section className="bg-white/40 dark:bg-slate-800/40 glass-panel rounded-[3rem] p-8 md:p-12 shadow-lg border border-white/20 dark:border-slate-700/50" style={glassStyle}>
         <div className="text-center mb-10">
           <span className="material-icons-round text-primary text-4xl mb-2">favorite</span>
           <h2 className="text-3xl font-display font-bold text-primary">Our journey</h2>
@@ -176,7 +201,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onViewMemory, journal
         ) : (
           <div className="space-y-4 max-w-2xl mx-auto">
             {journeyStats.map((stat) => (
-              <div key={stat.label} className="glass-card p-6 rounded-3xl shadow-sm hover:shadow-md transition-shadow flex items-center gap-6 group">
+              <div key={stat.label} className="glass-card p-6 rounded-3xl shadow-sm hover:shadow-md transition-shadow flex items-center gap-6 group" style={glassStyle}>
                 <div className="w-12 h-12 rounded-2xl flex items-center justify-center group-hover:bg-primary group-hover:text-on-primary transition-colors" style={{ backgroundColor: 'var(--color-primary-icon-bg-current, rgba(165,108,185,0.22))' }}>
                   <span className="material-icons-round text-primary group-hover:text-on-primary transition-colors" style={{ color: 'var(--color-primary)' }}>{stat.icon}</span>
                 </div>
@@ -203,6 +228,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onViewMemory, journal
               type="button"
               onClick={() => onNavigate('cute-texts')}
               className="btn-glass flex items-center gap-2 px-4 py-2 rounded-full border border-primary/30 text-primary hover:bg-primary hover:text-on-primary transition-colors font-semibold text-sm"
+              style={glassStyle}
             >
               <span className="material-icons-round text-lg">grid_view</span>
               View all
@@ -215,6 +241,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onViewMemory, journal
                onClick={() => scrollCuteTexts('left')}
                className="btn-glass w-10 h-10 rounded-full border border-primary/20 flex items-center justify-center text-primary hover:bg-primary hover:text-on-primary transition-colors"
                aria-label="Previous cute text"
+               style={glassStyle}
              >
                <span className="material-icons-round">chevron_left</span>
              </button>
@@ -223,6 +250,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onViewMemory, journal
                onClick={() => scrollCuteTexts('right')}
                className="btn-glass w-10 h-10 rounded-full border border-primary/20 flex items-center justify-center text-primary hover:bg-primary hover:text-on-primary transition-colors"
                aria-label="Next cute text"
+               style={glassStyle}
              >
                <span className="material-icons-round">chevron_right</span>
              </button>
