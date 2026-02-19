@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout';
 import Login from './components/Login';
+import ForgotPassword from './components/ForgotPassword';
+import ResetPassword from './components/ResetPassword';
 import Dashboard from './components/Dashboard';
 import AddMemory from './components/AddMemory';
 import Anniversary from './components/Anniversary';
@@ -17,6 +19,7 @@ import type { JournalData, Memory } from './types';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewState>('login');
+  const [resetToken, setResetToken] = useState<string | null>(null);
   const [checkingSession, setCheckingSession] = useState(true);
   const [isDark, setIsDark] = useState(false);
   const [journal, setJournal] = useState<JournalData | null>(null);
@@ -26,6 +29,21 @@ const App: React.FC = () => {
   const [memoryDetailReturnView, setMemoryDetailReturnView] = useState<ViewState>('dashboard');
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const reset = params.get('reset');
+    if (reset?.trim()) {
+      setResetToken(reset.trim());
+      setCurrentView('reset-password');
+      window.history.replaceState({}, '', window.location.pathname || '/');
+    }
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('reset')?.trim()) {
+      setCheckingSession(false);
+      return;
+    }
     const token = getToken();
     if (!token) {
       setCheckingSession(false);
@@ -107,7 +125,25 @@ const App: React.FC = () => {
     }
     switch (currentView) {
       case 'login':
-        return <Login onLoginSuccess={handleLoginSuccess} />;
+        return <Login onLoginSuccess={handleLoginSuccess} onForgotPassword={() => setCurrentView('forgot-password')} />;
+      case 'forgot-password':
+        return <ForgotPassword onBack={() => setCurrentView('login')} />;
+      case 'reset-password':
+        return resetToken ? (
+          <ResetPassword
+            token={resetToken}
+            onSuccess={() => {
+              setResetToken(null);
+              setCurrentView('login');
+            }}
+            onBack={() => {
+              setResetToken(null);
+              setCurrentView('login');
+            }}
+          />
+        ) : (
+          <Login onLoginSuccess={handleLoginSuccess} onForgotPassword={() => setCurrentView('forgot-password')} />
+        );
       case 'dashboard':
         return (
           <Dashboard

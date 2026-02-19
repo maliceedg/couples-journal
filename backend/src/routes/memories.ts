@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
 import { prisma } from '../db.js';
+import { findJournalForUser } from '../journalHelpers.js';
 
 export const memoriesRouter = Router();
 
@@ -9,7 +10,7 @@ function getUserId(res: Response): string {
 
 async function getJournalId(res: Response): Promise<string | null> {
   const userId = getUserId(res);
-  const j = await prisma.journal.findFirst({ where: { userId }, select: { id: true } });
+  const j = await findJournalForUser(userId);
   return j?.id ?? null;
 }
 

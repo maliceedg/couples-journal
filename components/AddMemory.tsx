@@ -209,8 +209,8 @@ const AddMemory: React.FC<AddMemoryProps> = ({ journal, onCancel, onSave }) => {
                     id="cute-sender"
                     className="w-full px-5 py-4 bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all dark:text-white"
                   >
-                    <option value="ME">Me</option>
-                    <option value="PARTNER">Partner</option>
+                    <option value="ME">{journal?.currentUser?.displayName ?? 'Me'}</option>
+                    <option value="PARTNER">{journal?.partnerName ?? 'Partner'}</option>
                   </select>
                 </div>
                 <div className="space-y-2">

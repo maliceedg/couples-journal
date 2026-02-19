@@ -10,39 +10,86 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ——— Users (one per account; can own one journal for now) ———
+// ——— Users (one per account; can own one journal and/or join one as partner) ———
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  name         String?  // legacy / display; prefer firstName + lastName
-  firstName    String?
-  lastName     String?
-  phone        String?  // for future OTP auth
-  timezone     String?  // IANA e.g. America/Caracas (VET)
-  passwordHash String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt @default(now())
-  journal      Journal?
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String?  // legacy / display; prefer firstName + lastName
+  firstName     String?
+  lastName      String?
+  phone         String?  // for future OTP auth
+  timezone      String?  // IANA e.g. America/Caracas (VET)
+  passwordHash  String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt @default(now())
+  journal       Journal?       // journal they own (creator)
+  journalMember JournalMember[] // journals they joined as partner
+  passwordResets PasswordResetToken[]
+  cuteTexts     CuteText[]
+}
+
+// ——— Password reset (forgot password) ———
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
 }
 
 // ——— One journal per couple (e.g. "Carla & Edgardo") ———
 model Journal {
-  id          String   @id @default(cuid())
-  name        String   // e.g. "Carla & Edgardo"
-  startDate   DateTime // relationship start date
-  accentColor String?  // hex, e.g. #A56CB9; used for theme
-  dateFormat  String?  // 'DMY' (dd/mm/yyyy) or 'MDY' (mm/dd/yyyy)
-  songUrl     String?  // YouTube or Spotify link for "Our Song"
-  songTitle   String?  // Fetched from oEmbed when saving songUrl (e.g. "Landline")
-  songArtist  String?  // Artist name from oEmbed (YouTube author_name; Spotify parsed or from title)
-  createdAt   DateTime @default(now())
-  userId      String   @unique
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                 String   @id @default(cuid())
+  name               String   // e.g. "Carla & Edgardo"
+  startDate          DateTime // relationship start date
+  accentColor        String?  // hex, e.g. #A56CB9; used for theme
+  dateFormat         String?  // 'DMY' (dd/mm/yyyy) or 'MDY' (mm/dd/yyyy)
+  songUrl            String?  // YouTube or Spotify link for "Our Song"
+  songTitle          String?  // Fetched from oEmbed when saving songUrl (e.g. "Landline")
+  songArtist         String?  // Artist name from oEmbed (YouTube author_name; Spotify parsed or from title)
+  partnerDisplayName String?  // Partner name until they join; then API returns live partner name
+  createdAt          DateTime @default(now())
+  userId             String   @unique // owner/creator
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  memories   Memory[]
+  members   JournalMember[]
+  invites   JournalInvite[]
+  memories  Memory[]
   milestones Milestone[]
   cuteTexts  CuteText[]
   chatStats  ChatStat[]
+}
+
+// ——— Partner link: second user can view/edit same journal ———
+model JournalMember {
+  id        String   @id @default(cuid())
+  journalId String
+  userId    String
+  createdAt DateTime @default(now())
+  journal   Journal  @relation(fields: [journalId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([journalId, userId])
+  @@index([userId])
+}
+
+// ——— Invite by code/link: token can be used once to join a journal ———
+model JournalInvite {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  journalId String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  journal   Journal   @relation(fields: [journalId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([journalId])
 }
 
 // ——— Memories (daily or milestone) ———
@@ -89,8 +136,11 @@ model CuteText {
   createdAt DateTime @default(now())
   journalId String
   journal   Journal  @relation(fields: [journalId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([journalId])
+  @@index([userId])
 }
 
 // ——— Chat stats (total messages, top sender, most active time) ———

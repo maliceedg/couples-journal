@@ -1,4 +1,4 @@
-export type ViewState = 'login' | 'dashboard' | 'add-memory' | 'anniversary' | 'memory-detail' | 'memories' | 'cute-texts' | 'profile' | 'wrapped';
+export type ViewState = 'login' | 'dashboard' | 'add-memory' | 'anniversary' | 'memory-detail' | 'memories' | 'cute-texts' | 'profile' | 'wrapped' | 'forgot-password' | 'reset-password';
 
 export interface UserProfile {
   id: string;
@@ -35,6 +35,7 @@ export interface TextMessage {
   date: string;
   isFavorite: boolean;
   color: 'white' | 'primary';
+  createdByUserId?: string;
 }
 
 export interface Milestone {
@@ -55,6 +56,10 @@ export interface JournalData {
   songUrl?: string | null;
   songTitle?: string | null;
   songArtist?: string | null;
+  partnerName?: string | null;
+  partnerDisplayName?: string | null;
+  partnerFirstName?: string | null;
+  currentUser?: { id: string; displayName: string; firstName?: string | null };
   memories: Memory[];
   milestones: Milestone[];
   cuteTexts: TextMessage[];

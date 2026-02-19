@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { login, register, getApiErrorMessage } from '../api';
-import { isDateAfterToday } from '../utils/dateHelpers';
+import { isDateAfterToday, formatDateInputMask, parseUserDateToISO } from '../utils/dateHelpers';
 import type { LoginResponse } from '../api';
 
 /** Inline glass blur so it can't be overridden by stylesheet order (same as Dashboard). */
@@ -12,9 +12,10 @@ const glassStyle: React.CSSProperties = {
 
 interface LoginProps {
   onLoginSuccess: (data: LoginResponse) => void;
+  onForgotPassword?: () => void;
 }
 
-const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
+const Login: React.FC<LoginProps> = ({ onLoginSuccess, onForgotPassword }) => {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -23,8 +24,12 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [lastName, setLastName] = useState('');
   const [journalName, setJournalName] = useState('');
   const [startDate, setStartDate] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showRegisterPasswords, setShowRegisterPasswords] = useState(false);
+  const hasInviteCode = inviteCode.trim().length > 0;
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,11 +66,16 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       setError('Passwords do not match.');
       return;
     }
-    if (!journalName.trim()) {
-      setError('Please enter a name for your journal (e.g. "Carla & Edgardo").');
+    if (!hasInviteCode && !journalName.trim()) {
+      setError('Please enter a name for your journal (e.g. "Carla & Edgardo") or use an invite code to join an existing one.');
       return;
     }
-    if (startDate.trim() && isDateAfterToday(startDate.trim())) {
+    const startDateIso = startDate.trim() ? parseUserDateToISO(startDate.trim(), 'DMY') : undefined;
+    if (startDate.trim() && !startDateIso) {
+      setError('Relationship start date must be dd/mm/yyyy.');
+      return;
+    }
+    if (startDateIso && isDateAfterToday(startDateIso)) {
       setError('Relationship start date cannot be in the future.');
       return;
     }
@@ -76,8 +86,9 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         password,
         firstName: firstName.trim() || undefined,
         lastName: lastName.trim() || undefined,
-        journalName: journalName.trim(),
-        startDate: startDate.trim() || undefined,
+        journalName: hasInviteCode ? undefined : journalName.trim(),
+        startDate: startDateIso || undefined,
+        inviteCode: hasInviteCode ? inviteCode.trim() : undefined,
       });
       onLoginSuccess(data);
     } catch (err) {
@@ -146,7 +157,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                     onChange={(e) => setEmail(e.target.value)}
                     autoComplete="email"
                     className="w-full h-14 pl-12 pr-4 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none dark:text-white"
-                    placeholder="you@example.com"
+                    placeholder="Enter your email"
                     disabled={loading}
                   />
                 </div>
@@ -154,12 +165,16 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               <div className="space-y-2">
                 <div className="flex justify-between items-center px-1">
                   <label className="text-slate-900 dark:text-white text-sm font-semibold">Password</label>
-                  <a href="#" className="text-primary text-xs font-bold hover:underline">Forgot Password?</a>
+                  {onForgotPassword && (
+                    <button type="button" onClick={onForgotPassword} className="text-primary text-xs font-bold hover:underline">
+                      Forgot Password?
+                    </button>
+                  )}
                 </div>
                 <div className="relative flex items-center group">
                   <span className="material-icons-round absolute left-4 text-slate-400 group-focus-within:text-primary transition-colors">lock</span>
                   <input 
-                    type="password" 
+                    type={showLoginPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     autoComplete="current-password"
@@ -167,8 +182,13 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                     placeholder="••••••••"
                     disabled={loading}
                   />
-                  <button type="button" className="absolute right-4 text-slate-400 hover:text-primary">
-                    <span className="material-icons-round">visibility</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowLoginPassword((prev) => !prev)}
+                    className="absolute right-4 text-slate-400 hover:text-primary transition-colors"
+                    aria-label={showLoginPassword ? 'Hide password' : 'Show password'}
+                  >
+                    <span className="material-icons-round">{showLoginPassword ? 'visibility_off' : 'visibility'}</span>
                   </button>
                 </div>
               </div>
@@ -213,7 +233,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                     onChange={(e) => setEmail(e.target.value)}
                     autoComplete="email"
                     className="w-full h-12 pl-12 pr-4 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none dark:text-white"
-                    placeholder="you@example.com"
+                    placeholder="Enter your email"
                     disabled={loading}
                   />
                 </div>
@@ -227,7 +247,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                     onChange={(e) => setFirstName(e.target.value)}
                     autoComplete="given-name"
                     className="w-full h-12 pl-4 pr-4 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent outline-none dark:text-white"
-                    placeholder="Edgardo"
+                    placeholder="First name"
                     disabled={loading}
                   />
                 </div>
@@ -239,7 +259,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                     onChange={(e) => setLastName(e.target.value)}
                     autoComplete="family-name"
                     className="w-full h-12 pl-4 pr-4 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent outline-none dark:text-white"
-                    placeholder="Gonzalez"
+                    placeholder="Last name"
                     disabled={loading}
                   />
                 </div>
@@ -249,14 +269,22 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 <div className="relative flex items-center group">
                   <span className="material-icons-round absolute left-4 text-slate-400 group-focus-within:text-primary transition-colors">lock</span>
                   <input 
-                    type="password" 
+                    type={showRegisterPasswords ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     autoComplete="new-password"
-                    className="w-full h-12 pl-12 pr-4 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent outline-none dark:text-white"
-                    placeholder="••••••••"
+                    className="w-full h-12 pl-12 pr-12 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent outline-none dark:text-white"
+                    placeholder="Enter password (min 6 characters)"
                     disabled={loading}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowRegisterPasswords((prev) => !prev)}
+                    className="absolute right-4 text-slate-400 hover:text-primary transition-colors"
+                    aria-label={showRegisterPasswords ? 'Hide password' : 'Show password'}
+                  >
+                    <span className="material-icons-round">{showRegisterPasswords ? 'visibility_off' : 'visibility'}</span>
+                  </button>
                 </div>
               </div>
               <div className="space-y-2">
@@ -264,41 +292,70 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 <div className="relative flex items-center group">
                   <span className="material-icons-round absolute left-4 text-slate-400 group-focus-within:text-primary transition-colors">lock</span>
                   <input 
-                    type="password" 
+                    type={showRegisterPasswords ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     autoComplete="new-password"
-                    className="w-full h-12 pl-12 pr-4 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent outline-none dark:text-white"
-                    placeholder="••••••••"
+                    className="w-full h-12 pl-12 pr-12 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent outline-none dark:text-white"
+                    placeholder="Confirm password"
                     disabled={loading}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowRegisterPasswords((prev) => !prev)}
+                    className="absolute right-4 text-slate-400 hover:text-primary transition-colors"
+                    aria-label={showRegisterPasswords ? 'Hide password' : 'Show password'}
+                  >
+                    <span className="material-icons-round">{showRegisterPasswords ? 'visibility_off' : 'visibility'}</span>
+                  </button>
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-slate-900 dark:text-white text-sm font-semibold px-1">Journal name</label>
+                <label className="text-slate-900 dark:text-white text-sm font-semibold px-1">Invite code (optional)</label>
                 <div className="relative flex items-center group">
-                  <span className="material-icons-round absolute left-4 text-slate-400 group-focus-within:text-primary transition-colors">menu_book</span>
+                  <span className="material-icons-round absolute left-4 text-slate-400 group-focus-within:text-primary transition-colors">link</span>
                   <input 
                     type="text"
-                    value={journalName}
-                    onChange={(e) => setJournalName(e.target.value)}
-                    className="w-full h-12 pl-12 pr-4 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent outline-none dark:text-white"
-                    placeholder="Carla & Edgardo"
+                    value={inviteCode}
+                    onChange={(e) => setInviteCode(e.target.value)}
+                    className="w-full h-12 pl-12 pr-4 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent outline-none dark:text-white font-mono text-sm"
+                    placeholder="Enter invite code"
                     disabled={loading}
                   />
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 px-1">The name of your shared journal</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 px-1">If you have a code from your partner, enter it to join their journal. Otherwise create a new one below.</p>
               </div>
-              <div className="space-y-2">
-                <label className="text-slate-900 dark:text-white text-sm font-semibold px-1">Relationship start date (optional)</label>
-                <input 
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full h-12 pl-4 pr-4 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent outline-none dark:text-white"
-                  disabled={loading}
-                />
-              </div>
+              {!hasInviteCode && (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-slate-900 dark:text-white text-sm font-semibold px-1">Journal name</label>
+                    <div className="relative flex items-center group">
+                      <span className="material-icons-round absolute left-4 text-slate-400 group-focus-within:text-primary transition-colors">menu_book</span>
+                      <input 
+                        type="text"
+                        value={journalName}
+                        onChange={(e) => setJournalName(e.target.value)}
+                        className="w-full h-12 pl-12 pr-4 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent outline-none dark:text-white"
+                        placeholder="Enter journal name"
+                        disabled={loading}
+                      />
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 px-1">The name of your shared journal</p>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-slate-900 dark:text-white text-sm font-semibold px-1">Relationship start date (optional)</label>
+                    <input 
+                      type="text"
+                      value={startDate}
+                      onChange={(e) => setStartDate(formatDateInputMask(e.target.value))}
+                      placeholder="dd/mm/yyyy"
+                      maxLength={10}
+                      className="w-full h-12 pl-4 pr-4 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-primary focus:border-transparent outline-none dark:text-white"
+                      disabled={loading}
+                    />
+                  </div>
+                </>
+              )}
               <button 
                 type="submit"
                 disabled={loading}

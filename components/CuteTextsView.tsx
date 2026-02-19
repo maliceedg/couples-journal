@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { formatDateByPreference } from '../utils/dateHelpers';
+import { getCuteTextSenderDisplayName } from '../utils/cuteTextHelpers';
 import type { JournalData, TextMessage } from '../types';
 
 type FilterKind = 'all' | 'favorites' | 'regular';
@@ -11,7 +12,16 @@ interface CuteTextsViewProps {
   onBack: () => void;
 }
 
-function CuteTextCard({ msg, dateFormat }: { msg: TextMessage; dateFormat: 'DMY' | 'MDY' }) {
+function CuteTextCard({
+  msg,
+  journal,
+  dateFormat,
+}: {
+  msg: TextMessage;
+  journal: JournalData | null;
+  dateFormat: 'DMY' | 'MDY';
+}) {
+  const senderLabel = getCuteTextSenderDisplayName(msg, journal);
   return (
     <div
       className={`p-6 rounded-t-3xl shadow-lg relative flex flex-col justify-between min-h-[200px] ${
@@ -35,7 +45,7 @@ function CuteTextCard({ msg, dateFormat }: { msg: TextMessage; dateFormat: 'DMY'
           msg.color === 'primary' ? 'border-on-primary/20' : 'border-slate-100 dark:border-slate-700'
         }`}
       >
-        <span className="font-bold uppercase tracking-wider">{msg.sender}</span>
+        <span className="font-bold uppercase tracking-wider">{senderLabel}</span>
         <span className="opacity-60">{formatDateByPreference(msg.date, dateFormat)}</span>
       </div>
     </div>
@@ -151,7 +161,7 @@ const CuteTextsView: React.FC<CuteTextsViewProps> = ({ journal, loading, error, 
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {sortedAndFiltered.map((msg) => (
-              <CuteTextCard key={msg.id} msg={msg} dateFormat={journal.dateFormat ?? 'DMY'} />
+              <CuteTextCard key={msg.id} msg={msg} journal={journal} dateFormat={journal.dateFormat ?? 'DMY'} />
             ))}
           </div>
           {sortedAndFiltered.length === 0 && filter === 'regular' && (

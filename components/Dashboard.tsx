@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import TimeCounter from './TimeCounter';
 import { memoryImageUrl } from '../api';
 import { daysUntilNextMonthly, daysUntilNextYearly, formatDateByPreference, parseLocalDate } from '../utils/dateHelpers';
+import { getCuteTextSenderDisplayName } from '../utils/cuteTextHelpers';
 import { ViewState } from '../types';
 import type { JournalData, Memory } from '../types';
 
@@ -69,15 +70,21 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onViewMemory, journal
       {/* Header */}
       <header className="text-center mb-16 relative">
         <h1 className="font-display text-5xl md:text-7xl text-primary mb-4 drop-shadow-sm">{journal.name}</h1>
+        {journal.partnerName && (
+          <p className="text-base md:text-lg text-slate-600 dark:text-slate-400 mb-2">
+            With <span className="font-semibold text-primary">{journal.partnerName}</span>
+          </p>
+        )}
         <p className="text-lg md:text-xl italic text-slate-600 dark:text-slate-400">I love you, thank you for simply existing in my life</p>
-        <div className="absolute top-0 right-0 hidden md:block">
-           <button 
-             onClick={() => onNavigate('anniversary')}
-             className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 rounded-full text-xs font-bold text-primary shadow-lg hover:scale-105 transition-transform"
-           >
-             <span className="material-icons-round text-base">celebration</span>
-             View Anniversary
-           </button>
+        <div className="mt-6 flex justify-center md:absolute md:top-0 md:right-0 md:mt-0 md:justify-end">
+          <button
+            type="button"
+            onClick={() => onNavigate('anniversary')}
+            className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 rounded-full text-sm font-bold text-primary shadow-lg hover:scale-105 transition-transform touch-manipulation"
+          >
+            <span className="material-icons-round text-base">celebration</span>
+            View Anniversary
+          </button>
         </div>
       </header>
 
@@ -277,7 +284,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onViewMemory, journal
               )}
               <p className="font-display italic text-lg leading-relaxed mb-4">"{msg.text}"</p>
               <div className={`flex items-center justify-between border-t pt-4 text-xs ${msg.color === 'primary' ? 'border-on-primary/20' : 'border-slate-100 dark:border-slate-700'}`}>
-                <span className="font-bold uppercase tracking-wider">{msg.sender}</span>
+                <span className="font-bold uppercase tracking-wider">{getCuteTextSenderDisplayName(msg, journal)}</span>
                 <span className="opacity-60">{formatDateByPreference(msg.date, journal.dateFormat ?? 'DMY')}</span>
               </div>
             </div>

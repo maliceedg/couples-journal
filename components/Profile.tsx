@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getProfile, updateProfile, updateJournalPreferences, getApiErrorMessage } from '../api';
+import { getProfile, updateProfile, updateJournalPreferences, createJournalInvite, joinJournalWithToken, getApiErrorMessage } from '../api';
 import { ACCENT_COLORS } from '../constants/colors';
 import { formatDateByPreference, formatDateInputMask, parseUserDateToISO, isDateAfterToday } from '../utils/dateHelpers';
 import { parseSongUrl, isValidSongUrl } from '../utils/songUrl';
@@ -37,6 +37,16 @@ const Profile: React.FC<ProfileViewProps> = ({ journal, journalLoading, onBack, 
   const [songSaving, setSongSaving] = useState(false);
   const [songSuccess, setSongSuccess] = useState(false);
   const [songError, setSongError] = useState<string | null>(null);
+  const [partnerDisplayName, setPartnerDisplayName] = useState(journal?.partnerDisplayName ?? '');
+  const [partnerSaving, setPartnerSaving] = useState(false);
+  const [partnerSuccess, setPartnerSuccess] = useState(false);
+  const [inviteToken, setInviteToken] = useState<string | null>(null);
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteCopied, setInviteCopied] = useState(false);
+  const [joinCode, setJoinCode] = useState('');
+  const [joinLoading, setJoinLoading] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const [joinSuccess, setJoinSuccess] = useState(false);
 
   useEffect(() => {
     if (journal) {
@@ -45,6 +55,7 @@ const Profile: React.FC<ProfileViewProps> = ({ journal, journalLoading, onBack, 
       const iso = journal.startDate?.slice(0, 10) ?? '';
       setAnniversaryDate(iso ? formatDateByPreference(iso, journal.dateFormat ?? 'DMY') : '');
       setSongUrl(journal.songUrl ?? '');
+      setPartnerDisplayName(journal.partnerDisplayName ?? '');
     }
   }, [journal]);
 
@@ -222,6 +233,145 @@ const Profile: React.FC<ProfileViewProps> = ({ journal, journalLoading, onBack, 
                 {saving ? 'Saving...' : 'Save changes'}
               </button>
             </form>
+
+            {/* Partner name & invite */}
+            <div className="pt-6 border-t border-slate-200 dark:border-slate-600 space-y-4">
+              <h2 className="text-lg font-semibold text-slate-800 dark:text-white mb-2">Partner</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
+                Set your partner&apos;s name for the dashboard. Once they join with an invite code, it will show their account name automatically.
+              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                <input
+                  type="text"
+                  value={partnerDisplayName}
+                  onChange={(e) => { setPartnerDisplayName(e.target.value); setPartnerSuccess(false); }}
+                  placeholder="Partner's name"
+                  className="flex-1 min-w-[160px] max-w-xs px-4 py-3 bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none dark:text-white"
+                />
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setPartnerSaving(true);
+                    setPartnerSuccess(false);
+                    try {
+                      const updated = await updateJournalPreferences({ partnerDisplayName: partnerDisplayName.trim() || null });
+                      onPreferencesSaved(updated);
+                      setPartnerSuccess(true);
+                    } catch {
+                      // ignore
+                    } finally {
+                      setPartnerSaving(false);
+                    }
+                  }}
+                  disabled={partnerSaving}
+                  className="flex items-center gap-2 px-4 py-3 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-on-primary transition-colors font-semibold disabled:opacity-60"
+                >
+                  <span className="material-icons-round text-lg">{partnerSaving ? 'hourglass_empty' : 'person'}</span>
+                  {partnerSaving ? 'Saving…' : 'Save'}
+                </button>
+              </div>
+              {partnerSuccess && <p className="text-sm text-green-600 dark:text-green-400">Partner name saved.</p>}
+              {journal?.partnerName && (
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  Showing on dashboard: <strong>{journal.partnerName}</strong>
+                </p>
+              )}
+              <div className="pt-4">
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Invite your partner</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+                  Generate a one-time link or code. Your partner can enter it when registering, or use &quot;Join with code&quot; after logging in.
+                </p>
+                {!inviteToken ? (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setInviteLoading(true);
+                      setInviteToken(null);
+                      try {
+                        const { token } = await createJournalInvite();
+                        setInviteToken(token);
+                      } catch (err) {
+                        setError(getApiErrorMessage(err, 'Failed to create invite'));
+                      } finally {
+                        setInviteLoading(false);
+                      }
+                    }}
+                    disabled={inviteLoading}
+                    className="flex items-center gap-2 px-4 py-3 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-on-primary transition-colors font-semibold disabled:opacity-60"
+                  >
+                    <span className="material-icons-round text-lg">{inviteLoading ? 'hourglass_empty' : 'link'}</span>
+                    {inviteLoading ? 'Creating…' : 'Create invite code'}
+                  </button>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <code className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-sm font-mono break-all">
+                      {inviteToken}
+                    </code>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(inviteToken);
+                        setInviteCopied(true);
+                        setTimeout(() => setInviteCopied(false), 2000);
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-on-primary transition-colors font-semibold text-sm"
+                    >
+                      <span className="material-icons-round text-lg">{inviteCopied ? 'check' : 'content_copy'}</span>
+                      {inviteCopied ? 'Copied!' : 'Copy'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setInviteToken(null)}
+                      className="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 text-sm font-medium"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div className="pt-4 border-t border-slate-200 dark:border-slate-600 mt-4">
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Join a journal with a code</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+                  If your partner sent you an invite code and you already have an account, enter it here to join their journal.
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="text"
+                    value={joinCode}
+                    onChange={(e) => { setJoinCode(e.target.value); setJoinError(null); setJoinSuccess(false); }}
+                    placeholder="Paste invite code"
+                    className="flex-1 min-w-[140px] max-w-xs px-4 py-2 rounded-xl bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-primary outline-none dark:text-white font-mono text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const code = joinCode.trim();
+                      if (!code) return;
+                      setJoinLoading(true);
+                      setJoinError(null);
+                      setJoinSuccess(false);
+                      try {
+                        const updated = await joinJournalWithToken(code);
+                        onPreferencesSaved(updated);
+                        setJoinSuccess(true);
+                        setJoinCode('');
+                      } catch (err) {
+                        setJoinError(getApiErrorMessage(err, 'Failed to join journal'));
+                      } finally {
+                        setJoinLoading(false);
+                      }
+                    }}
+                    disabled={joinLoading || !joinCode.trim()}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-on-primary transition-colors font-semibold text-sm disabled:opacity-60"
+                  >
+                    <span className="material-icons-round text-lg">{joinLoading ? 'hourglass_empty' : 'login'}</span>
+                    {joinLoading ? 'Joining…' : 'Join journal'}
+                  </button>
+                </div>
+                {joinError && <p className="text-sm text-red-600 dark:text-red-400 mt-2" role="alert">{joinError}</p>}
+                {joinSuccess && <p className="text-sm text-green-600 dark:text-green-400 mt-2">You joined the journal. Refresh or go back to the dashboard to see it.</p>}
+              </div>
+            </div>
 
             {/* Anniversary date (relationship start) */}
             <div className="pt-6 border-t border-slate-200 dark:border-slate-600 space-y-4">

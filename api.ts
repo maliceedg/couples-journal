@@ -53,6 +53,24 @@ export interface LoginResponse {
   journal: JournalData;
 }
 
+export async function requestPasswordReset(email: string): Promise<{ message: string }> {
+  const res = await fetch(`${API_BASE}/api/auth/forgot-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email.trim().toLowerCase() }),
+  });
+  return handleResponse<{ message: string }>(res);
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+  const res = await fetch(`${API_BASE}/api/auth/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: token.trim(), newPassword }),
+  });
+  return handleResponse<{ message: string }>(res);
+}
+
 export async function login(email: string, password: string): Promise<LoginResponse> {
   const res = await fetch(`${API_BASE}/api/auth/login`, {
     method: 'POST',
@@ -67,22 +85,25 @@ export interface RegisterPayload {
   password: string;
   firstName?: string;
   lastName?: string;
-  journalName: string;
-  startDate?: string; // YYYY-MM-DD optional
+  journalName?: string;
+  startDate?: string;
+  inviteCode?: string;
 }
 
 export async function register(payload: RegisterPayload): Promise<LoginResponse> {
+  const body: Record<string, string | undefined> = {
+    email: payload.email.trim().toLowerCase(),
+    password: payload.password,
+    firstName: payload.firstName?.trim() || undefined,
+    lastName: payload.lastName?.trim() || undefined,
+    journalName: payload.journalName?.trim() || undefined,
+    startDate: payload.startDate || undefined,
+    inviteCode: payload.inviteCode?.trim() || undefined,
+  };
   const res = await fetch(`${API_BASE}/api/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      email: payload.email.trim().toLowerCase(),
-      password: payload.password,
-      firstName: payload.firstName?.trim() || undefined,
-      lastName: payload.lastName?.trim() || undefined,
-      journalName: payload.journalName.trim(),
-      startDate: payload.startDate || undefined,
-    }),
+    body: JSON.stringify(body),
   });
   return handleResponse<LoginResponse>(res);
 }
@@ -97,6 +118,7 @@ export async function updateJournalPreferences(data: {
   dateFormat?: 'DMY' | 'MDY' | null;
   startDate?: string | null;
   songUrl?: string | null;
+  partnerDisplayName?: string | null;
 }): Promise<JournalData> {
   const res = await fetch(`${API_BASE}/api/journal`, {
     method: 'PATCH',
@@ -168,4 +190,26 @@ export async function updateProfile(data: {
     body: JSON.stringify(data),
   });
   return handleResponse<UserProfile>(res);
+}
+
+export interface CreateInviteResponse {
+  token: string;
+  expiresAt: string;
+}
+
+export async function createJournalInvite(): Promise<CreateInviteResponse> {
+  const res = await fetch(`${API_BASE}/api/journal/invite`, {
+    method: 'POST',
+    headers: authHeaders(),
+  });
+  return handleResponse<CreateInviteResponse>(res);
+}
+
+export async function joinJournalWithToken(token: string): Promise<JournalData> {
+  const res = await fetch(`${API_BASE}/api/journal/join`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ token: token.trim() }),
+  });
+  return handleResponse<JournalData>(res);
 }

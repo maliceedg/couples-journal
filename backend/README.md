@@ -65,6 +65,24 @@ API base: **http://localhost:3001**
 
 No SQL to write; Prisma handles it.
 
+## Deploying to Railway (or other host without a console)
+
+Railway doesn’t give you a shell to run commands on the server. After you change the Prisma schema and deploy the backend, **you must apply those schema changes to the production database from your machine**:
+
+1. Copy the **production** `DATABASE_URL` from Railway (Variables).
+2. From the `backend` folder, run:
+   ```bash
+   # Windows (PowerShell)
+   $env:DATABASE_URL = "postgresql://..."
+   npx prisma db push
+
+   # Mac/Linux
+   DATABASE_URL="postgresql://..." npx prisma db push
+   ```
+3. Then (or before) deploy the backend so the new code and generated Prisma client are live.
+
+If you skip this step, production will still be on the old schema and you may see errors like `column "X" does not exist`.
+
 ## Optional: Prisma Studio
 
 ```bash
